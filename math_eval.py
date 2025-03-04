@@ -74,7 +74,7 @@ def prepare_data(data_name, args):
     output_dir = args.output_dir
     if not os.path.exists(output_dir):
         output_dir = f"outputs/{output_dir}"
-    out_file = f"{output_dir}/{data_name}/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_n{args.n_sampling}m{args.num_answers_per_chunk}H{args.num_think_chunks}.jsonl"
+    out_file = f"{output_dir}/{data_name}/{out_file_prefix}_num{args.num_test_sample}s{args.start}e{args.end}_n{args.n_sampling}H{args.num_think_chunks}m{args.num_answers_per_chunk}.jsonl"
     os.makedirs(f"{output_dir}/{data_name}", exist_ok=True)
     return examples, out_file
 
