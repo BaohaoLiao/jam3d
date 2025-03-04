@@ -44,7 +44,7 @@ def parse_args():
 
     args = parser.parse_args()
     # top_p must be 1 when using greedy sampling (vllm)
-    args.top_p = (1 if args.temperature == 0 else args.top_p)  
+    args.top_p = 1 if args.temperature == 0 else args.top_p
     return args
 
 
