@@ -1,3 +1,4 @@
+import json
 import argparse
 import numpy as np
 from utils.data import load_jsonl
@@ -121,7 +122,12 @@ def main():
     k_values = [int(k) for k in args.k_values.split(',')]
     
     # Load samples
-    samples = load_jsonl(args.input_file)
+    samples = []
+    with open(args.input_file, 'r') as f:
+        for line in f:
+            samples.append(json.loads(line))
+    #samples = load_jsonl(args.input_file)
+    
     # Extract sub_scores from all samples
     all_sub_scores = [sample('all_sub_scores') if "all_sub_scores" in sample else sample('sub_scores') for sample in samples]
     n, H, m = len(all_sub_scores[0]), len(all_sub_scores[0][0]), len(all_sub_scores[0][0][0]) 
