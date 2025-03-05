@@ -149,7 +149,7 @@ def main():
         results = calculate_pass_at_k_H_dimension(all_sub_scores, k_values)
     else:
         assert max(k_values) <= m, "k should not be larger than m"
-        results = calculate_pass_at_k_H_dimension(all_sub_scores, k_values)
+        results = calculate_pass_at_k_m_dimension(all_sub_scores, k_values)
 
     print(results)
 
