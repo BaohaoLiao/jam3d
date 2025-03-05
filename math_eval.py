@@ -30,7 +30,8 @@ def parse_args():
     parser.add_argument("--pipeline_parallel_size", type=int, default=1)
     parser.add_argument("--max_num_seqs", type=int, default=32)
     parser.add_argument('--enable_prefix_caching', action='store_true', default=False)
-    parser.add_argument('--disable-chunked-prefill', action='store_false', default=True)
+    parser.add_argument('--disable_chunked_prefill', action='store_false', default=True)
+    parser.add_argument('--max_model_len', type=int, default=64000)
 
     # 3D maj
     parser.add_argument("--n_sampling", default=1, type=int, help="I.e. n")
@@ -92,6 +93,7 @@ def setup(args):
         max_num_seqs=args.max_num_seqs,
         enable_prefix_caching=args.enable_prefix_caching,
         enable_chunked_prefill=args.disable_chunked_prefill,
+        max_model_len=args.max_model_len,
     )
     tokenizer = llm.get_tokenizer()
 
