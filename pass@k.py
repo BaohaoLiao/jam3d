@@ -1,4 +1,3 @@
-import json
 import argparse
 import numpy as np
 from utils.data import load_jsonl
@@ -39,6 +38,41 @@ def calculate_pass_at_k_n_dimension(all_sub_scores, k_values):
     return results
 
 
+def calculate_pass_at_k_H_dimension(all_sub_scores, k_values):
+    """
+    Calculate Pass@k across the H dimension
+    Evenly samples k-1 chunks from each sample's reasoning and always includes the last chunk, 
+    e.g. sample from sub_scores[0, :, 0]
+    Averages the Pass@k scores across all samples, i.e. over dimension n
+    Input:
+        all_sub_scores: #questions x n x H x m
+    """
+    n_samples = len(all_sub_scores[0])
+    H_chunks = len(all_sub_scores[0][0])
+
+    # For each k value
+    results = {}
+    for k in k_values:
+        sample_H_indices = np.linspace(H_chunks-1, H_chunks//k-1, k, dtype=int)[::-1]
+        pass_k = []
+
+        # for each question
+        for sub_scores in all_sub_scores:
+            pass_k_for_each_n = []
+
+            # for each n dimension
+            for n in range(n_samples):
+                H_scores = [sub_scores[n][h][0] for h in sample_H_indices]
+                H_correct = sum(H_scores)
+                pass_k_for_each_n.append(pass_at_k(k, H_correct, k))
+
+            pass_k.append(np.mean(pass_k_for_each_n))
+
+        results[f"pass@{k}"] = float(f"{np.mean(pass_k):.4f}")
+    
+    return results
+
+
 def calculate_pass_at_k_m_dimension(all_sub_scores, k_values):
     """
     Calculate Pass@k across the m dimension
@@ -71,47 +105,6 @@ def calculate_pass_at_k_m_dimension(all_sub_scores, k_values):
     return results
 
 
-def calculate_pass_at_k_H_dimension(sub_scores, k_values):
-    """
-    Calculate Pass@k across the H dimension
-    Evenly samples k chunks from each sample's reasoning, e.g. sub_scores[0, :, 0]
-    Averages the Pass@k scores across all samples, i.e. over dimension n
-    Input:
-        all_sub_scores: #questions x n x H x m
-    """
-    results = {}
-    n_samples = len(sub_scores)
-    
-    # For each k value
-    for k in k_values:
-        pass_k_values = []
-        
-        # For each sample
-        for sample_idx in range(n_samples):
-            H_scores = [chunk[0] for chunk in sub_scores[sample_idx]]
-            H_total = len(H_scores)
-            
-            if k <= H_total:
-                # Evenly sample k chunks
-                indices = np.linspace(0, H_total - 1, k, dtype=int)
-                sampled_scores = [H_scores[i] for i in indices]
-                
-                # Count correct sampled scores
-                H_correct = sum(sampled_scores)
-                
-                # Calculate Pass@k for this sample
-                pass_k = pass_at_k(k, H_correct, k)
-                pass_k_values.append(pass_k)
-        
-        # Average Pass@k across all samples
-        if pass_k_values:
-            avg_pass_k = np.mean(pass_k_values)
-            results[f"pass@{k}"] = float(f"{avg_pass_k:.4f}")
-    
-    return results
-
-
-
 def main():
     parser = argparse.ArgumentParser(description="Calculate Pass@k metrics for mathematical reasoning evaluation")
     parser.add_argument("--input_file", type=str, required=True, help="Path to the evaluation output JSONL file")
@@ -142,39 +135,14 @@ def main():
     if args.dimension == 'n':
         assert max(k_values) <= n, "k should not be larger than n"
         results = calculate_pass_at_k_n_dimension(all_sub_scores, k_values)
+    elif args.dimension == 'H':
+        assert max(k_values) <= H, "k should not be larger than H"
+        results = calculate_pass_at_k_H_dimension(all_sub_scores, k_values)
+    else:
+        assert max(k_values) <= m, "k should not be larger than m"
+        results = calculate_pass_at_k_H_dimension(all_sub_scores, k_values)
 
-
-
-    calculate_pass_at_k_n_dimension(sub_scores, k_values)
-
-
-    pass_at_k_results = []
-    for k in k_values:
-        pass_at_k_results.append(calculate_pass_at_k_for_dimension(samples, args.dimension, k))
-    
-    # Prepare results
-    results = {
-        "dimension": args.dimension,
-        "fixed_dimensions": {k: v for k, v in fixed_dims.items() if k != args.dimension},
-        "num_samples": len(samples),
-        "pass_at_k": {f"pass@{k}": pass_at_k_results[k] * 100 for k in k_values}
-    }
-    
-    # Print results
-    print(f"Pass@k results for dimension {args.dimension}:")
-    for k in k_values:
-        print(f"  Pass@{k}: {pass_at_k_results[k] * 100:.2f}%")
-    
-    # Save results
-    output_file = args.output_file
-    if not output_file:
-        input_path = Path(args.input_file)
-        output_file = str(input_path.with_suffix('')) + f"_pass_at_k_{args.dimension}.json"
-    
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(results, f, indent=2)
-    
-    print(f"Results saved to {output_file}")
+    print(results)
 
 
 if __name__ == "__main__":
