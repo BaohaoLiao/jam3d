@@ -127,7 +127,8 @@ def main():
         for line in f:
             samples.append(json.loads(line))
     #samples = load_jsonl(args.input_file)
-    
+    print(samples[0])
+
     # Extract sub_scores from all samples
     all_sub_scores = [sample('all_sub_scores') if "all_sub_scores" in sample else sample('sub_scores') for sample in samples]
     n, H, m = len(all_sub_scores[0]), len(all_sub_scores[0][0]), len(all_sub_scores[0][0][0]) 
