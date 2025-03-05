@@ -1,7 +1,6 @@
 import json
 import argparse
 import numpy as np
-from utils.data import load_jsonl
 
 
 def pass_at_k(n, c, k):
@@ -128,7 +127,6 @@ def main():
     with open(args.input_file, 'r') as f:
         for line in f:
             samples.append(json.loads(line))
-    #samples = load_jsonl(args.input_file)
 
     # Extract sub_scores from all samples
     all_sub_scores = [sample['all_sub_scores'] if "all_sub_scores" in sample else sample['sub_scores'] for sample in samples]
