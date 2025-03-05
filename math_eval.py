@@ -29,6 +29,7 @@ def parse_args():
     parser.add_argument("--max_tokens_per_call", default=2048, type=int)
     parser.add_argument("--pipeline_parallel_size", type=int, default=1)
     parser.add_argument("--max_num_seqs", type=int, default=32)
+    parser.add_argument('--enable_prefix_caching', action='store_true', default=False)
 
     # 3D maj
     parser.add_argument("--n_sampling", default=1, type=int, help="I.e. n")
@@ -88,7 +89,7 @@ def setup(args):
         pipeline_parallel_size=args.pipeline_parallel_size,
         trust_remote_code=True,
         max_num_seqs=args.max_num_seqs,
-        enable_prefix_caching=True,
+        enable_prefix_caching=args.enable_prefix_caching,
     )
     tokenizer = llm.get_tokenizer()
 
