@@ -114,6 +114,8 @@ def main():
     parser.add_argument("--k_values", type=str, default="1,2,4,8", 
                         help="Comma-separated list of k values to calculate Pass@k for")
     args = parser.parse_args()
+    
+    print("=" * 50)
     for arg, value in vars(args).items():
         print(f"  {arg}: {value}")
     print()
@@ -132,10 +134,11 @@ def main():
     all_sub_scores = [sample['all_sub_scores'] if "all_sub_scores" in sample else sample['sub_scores'] for sample in samples]
     n, H, m = len(all_sub_scores[0]), len(all_sub_scores[0][0]), len(all_sub_scores[0][0][0]) 
 
-    print(f" #Questions: {len(all_sub_scores)}")
-    print(f" n: {n}")
-    print(f" H: {H}")
-    print(f" m: {m}")
+    print(f"  #Questions: {len(all_sub_scores)}")
+    print(f"  n: {n}")
+    print(f"  H: {H}")
+    print(f"  m: {m}")
+    print("=" * 50)
 
     # Calculate Pass@k based on the specified dimension
     if args.dimension == 'n':
