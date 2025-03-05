@@ -239,12 +239,12 @@ def main(llm, tokenizer, data_name, args):
                 "completion": think_answers[i * args.n_sampling : (i + 1) * args.n_sampling],
                 "think_sums": sample_completions,  # This will be [n, 1, 1]
                 "gt": new_gt,
-                "all_sub_preds": all_sub_preds,
-                "all_sub_scores": all_sub_scores,
-                "chunk_maj_preds": chunk_maj_preds,
-                "chunk_maj_scores": chunk_maj_scores,
-                "sample_maj_preds": sample_maj_preds,
-                "sample_maj_scores": sample_maj_scores,
+                "all_sub_preds": all_sub_preds, # shape [n, H, m], [n, -1, 0] is for H=1 and m=1
+                "all_sub_scores": all_sub_scores, # shape [n, H, m], [n, -1, 0] is for H=1 and m=1
+                "chunk_maj_preds": chunk_maj_preds, # shape [n, H]. Use maj to squeeze m dimension.
+                "chunk_maj_scores": chunk_maj_scores, # shape [n, H]. Use maj to squeeze m dimension.
+                "sample_maj_preds": sample_maj_preds, # shape [n]. Use maj to further squeeze H dimension.
+                "sample_maj_scores": sample_maj_scores, # shape [n]. Use maj to further squeeze H dimension.
             })
             all_samples.append(sample)
 
@@ -323,12 +323,12 @@ def main(llm, tokenizer, data_name, args):
                 "completion": think_answers[i * args.n_sampling : (i + 1) * args.n_sampling],
                 "think_sums": sample_completions,  # This will be [n, 1, m]
                 "gt": new_gt,
-                "all_sub_preds": all_sub_preds,
-                "all_sub_scores": all_sub_scores,
-                "chunk_maj_preds": chunk_maj_preds,
-                "chunk_maj_scores": chunk_maj_scores,
-                "sample_maj_preds": sample_maj_preds,
-                "sample_maj_scores": sample_maj_scores,
+                "all_sub_preds": all_sub_preds, # shape [n, H, m], [n, -1, 0] is for H=1 and m=1
+                "all_sub_scores": all_sub_scores, # shape [n, H, m], [n, -1, 0] is for H=1 and m=1
+                "chunk_maj_preds": chunk_maj_preds, # shape [n, H]. Use maj to squeeze m dimension.
+                "chunk_maj_scores": chunk_maj_scores, # shape [n, H]. Use maj to squeeze m dimension.
+                "sample_maj_preds": sample_maj_preds, # shape [n]. Use maj to further squeeze H dimension.
+                "sample_maj_scores": sample_maj_scores, # shape [n]. Use maj to further squeeze H dimension.
             })
             all_samples.append(sample)
     
@@ -461,12 +461,12 @@ def main(llm, tokenizer, data_name, args):
                 "completion": think_answers[i * args.n_sampling : (i + 1) * args.n_sampling],
                 "think_sums": sample_completions, # completion after </think>, [n, H, m]
                 "gt": new_gt,
-                "all_sub_preds": all_sub_preds,
-                "all_sub_scores": all_sub_scores,
-                "chunk_maj_preds": chunk_maj_preds,
-                "chunk_maj_scores": chunk_maj_scores,
-                "sample_maj_preds": sample_maj_preds,
-                "sample_maj_scores": sample_maj_scores,
+                "all_sub_preds": all_sub_preds, # shape [n, H, m], [n, -1, 0] is for H=1 and m=1
+                "all_sub_scores": all_sub_scores, # shape [n, H, m], [n, -1, 0] is for H=1 and m=1
+                "chunk_maj_preds": chunk_maj_preds, # shape [n, H]. Use maj to squeeze m dimension.
+                "chunk_maj_scores": chunk_maj_scores, # shape [n, H]. Use maj to squeeze m dimension.
+                "sample_maj_preds": sample_maj_preds, # shape [n]. Use maj to further squeeze H dimension.
+                "sample_maj_scores": sample_maj_scores, # shape [n]. Use maj to further squeeze H dimension.
             })
             all_samples.append(sample)
         
