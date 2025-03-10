@@ -95,6 +95,7 @@ def setup(args):
         enable_prefix_caching=args.enable_prefix_caching,
         enable_chunked_prefill=not args.disable_chunked_prefill,
         max_model_len=args.max_model_len,
+        seed=args.seed,
     )
     tokenizer = llm.get_tokenizer()
 
