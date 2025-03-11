@@ -39,6 +39,8 @@ def parse_args():
     parser.add_argument("--n_sampling", default=1, type=int, help="I.e. n")
     parser.add_argument("--num_think_chunks", default=1, type=int,
                         help="Evenly split the original think into multiple chunks, i.e. H")
+    parser.add_argument("--max_tokens_per_think_chunk", default=0, type=int,
+                        help="Max tokens per reasoning chunk. If > 0, overrides num_think_chunks.")
     parser.add_argument("--num_answers_per_chunk", default=1, type=int,
                        help="Number of answer variations to generate for each reasoning chunk, i.e. m")
     parser.add_argument("--max_tokens_per_answer", default=512, type=int)
@@ -85,7 +87,7 @@ def prepare_data(data_name, args):
     examples = examples[args.start : len(examples) if args.end == -1 else args.end]
 
     # get out_file name
-    chunk_param = f"H{args.num_think_chunks}" if args.max_tokens_per_think_chunk <= 0 else f"tokPerChunk{args.max_tokens_per_think_chunk}"
+    chunk_param = f"H{args.num_think_chunks}"  if args.max_tokens_per_think_chunk <= 0 else f"tokPerChunk{args.max_tokens_per_think_chunk}"
     out_file_prefix = f"{args.split}_{args.prompt_type}_seed{args.seed}_t{args.temperature}_len{args.max_tokens_per_call}"
     output_dir = args.output_dir
     if not os.path.exists(output_dir):
