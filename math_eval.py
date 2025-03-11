@@ -5,6 +5,7 @@ import random
 import argparse
 import numpy as np
 from tqdm import tqdm
+import torch
 from vllm import LLM, SamplingParams
 
 from utils.data import load_data, construct_prompt, save_jsonl
@@ -53,9 +54,13 @@ def parse_args():
 
 
 def set_seed(seed: int = 42) -> None:
-    np.random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
     random.seed(seed)
-    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.deterministic = True
     print(f"Random seed set as {seed}")
 
 
