@@ -180,7 +180,17 @@ def main(llm, tokenizer, data_name, args):
     prompts = [sample["prompt"] for sample in samples for _ in range(args.n_sampling)]
 
     # start inference
+    start_time = time.time()
     # Either load existing think answers or generate new ones
+    sampling_params = SamplingParams(
+        temperature=args.temperature,
+        top_p=args.top_p,
+        min_p=args.min_p,
+        max_tokens=args.max_tokens_per_call,
+        n=1,
+        skip_special_tokens=False,
+        seed=args.seed,
+    )
     if args.load_think_answers:
         # Load existing think answers from file
         think_answers_path = args.load_think_answers
@@ -192,22 +202,70 @@ def main(llm, tokenizer, data_name, args):
                 loaded_n_sampling = think_answers_data.get('n_sampling', 1)
                 loaded_num_samples = think_answers_data.get('num_samples', len(loaded_think_answers) // loaded_n_sampling)
 
-            assert len(loaded_think_answers) >= len(prompts), "Previously saved think answers are not enough"
-
-            if args.n_sampling < loaded_n_sampling:
-                # We need to take a subset of the loaded answers
-                print(f"Loaded think answers have n_sampling={loaded_n_sampling}, but current n_sampling={args.n_sampling}")
-                print(f"Selecting appropriate subset of loaded think answers")
-                
-                # Create an interleaved subset of the loaded think answers
-                think_answers = []
-                for i in range(len(samples)):
-                    # For each sample, select the first n_sampling answers
-                    for j in range(args.n_sampling):
-                        original_index = i * loaded_n_sampling + j
-                        think_answers.append(loaded_think_answers[original_index])
-                
-                print(f"Selected {len(think_answers)} out of {len(loaded_think_answers)} loaded think answers")
+            # Check if we need all or just a subset of the loaded think answers
+            if len(loaded_think_answers) >= len(prompts):
+                # We have enough think answers, but need to select the correct subset
+                # based on the interleaved pattern of n_sampling
+                if args.n_sampling < loaded_n_sampling:
+                    # We need to take a subset of the loaded answers
+                    print(f"Loaded think answers have n_sampling={loaded_n_sampling}, but current n_sampling={args.n_sampling}")
+                    print(f"Selecting appropriate subset of loaded think answers")
+                    
+                    # Create an interleaved subset of the loaded think answers
+                    think_answers = []
+                    for i in range(len(samples)):
+                        # For each sample, select the first n_sampling answers
+                        for j in range(args.n_sampling):
+                            original_index = i * loaded_n_sampling + j
+                            if original_index < len(loaded_think_answers):
+                                think_answers.append(loaded_think_answers[original_index])
+                    
+                    print(f"Selected {len(think_answers)} out of {len(loaded_think_answers)} loaded think answers")
+                else:
+                    # Same n_sampling, use all loaded think answers
+                    think_answers = loaded_think_answers
+                    print(f"Using all {len(think_answers)} loaded think answers")
+            else:
+                # Handle the case where current n_sampling is greater than what was saved
+                # Check if we're using the same dataset but different n_sampling
+                if len(samples) == loaded_num_samples and args.n_sampling > loaded_n_sampling:
+                    # We can reuse the loaded answers and generate only the additional ones needed
+                    print(f"Loaded think answers have n_sampling={loaded_n_sampling}, but current n_sampling={args.n_sampling}")
+                    print(f"Will use loaded answers and generate additional {len(prompts) - len(loaded_think_answers)} answers")
+                    
+                    # Create new prompts only for the additional samples needed
+                    additional_prompts = []
+                    for i, sample in enumerate(samples):
+                        for s in range(loaded_n_sampling, args.n_sampling):
+                            additional_prompts.append(sample["prompt"])
+                    
+                    # Generate additional think answers
+                    additional_outputs = llm.generate(additional_prompts, sampling_params)
+                    additional_outputs = sorted(additional_outputs, key=lambda x: int(x.request_id))
+                    additional_think_answers = [output.outputs[0].text for output in additional_outputs]
+                    
+                    # Combine loaded and new think answers in the correct interleaved pattern
+                    think_answers = []
+                    for i in range(len(samples)):
+                        # Add the loaded think answers for this sample
+                        for j in range(loaded_n_sampling):
+                            original_index = i * loaded_n_sampling + j
+                            if original_index < len(loaded_think_answers):
+                                think_answers.append(loaded_think_answers[original_index])
+                        
+                        # Add the additional think answers for this sample
+                        for j in range(args.n_sampling - loaded_n_sampling):
+                            additional_index = i * (args.n_sampling - loaded_n_sampling) + j
+                            if additional_index < len(additional_think_answers):
+                                think_answers.append(additional_think_answers[additional_index])
+                    
+                    assert len(think_answers) == len(prompts), f"Think answers count mismatch: {len(think_answers)} vs {len(prompts)}"
+                else:
+                    # The mismatch is due to something other than n_sampling
+                    # (like different dataset size or parameters), so generate all new answers
+                    print(f"Loaded think answers count ({len(loaded_think_answers)}) doesn't match required count ({len(prompts)})")
+                    print(f"And this doesn't appear to be just a difference in n_sampling. Generating all new answers.")
+                    think_answers = None
             
             print(f"Successfully loaded think answers")
         except Exception as e:
@@ -217,20 +275,10 @@ def main(llm, tokenizer, data_name, args):
     else:
         think_answers = None
     
+
     if think_answers is None:
         # Generate new think answers
-        outputs = llm.generate(
-            prompts,
-            SamplingParams(
-                temperature=args.temperature,
-                top_p=args.top_p,
-                min_p=args.min_p,
-                max_tokens=args.max_tokens_per_call,
-                n=1,
-                skip_special_tokens=False,
-                seed=args.seed,
-            ),
-        )
+        outputs = llm.generate(prompts, sampling_params)
         outputs = sorted(outputs, key=lambda x: int(x.request_id))
         think_answers = [output.outputs[0].text for output in outputs]
         assert len(think_answers) == len(prompts)
