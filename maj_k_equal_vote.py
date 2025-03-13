@@ -43,7 +43,8 @@ def main():
     print(f"  m: {m}")
     print("=" * 50)
     
-    results = {}
+    maj_k_results = {}
+    pass_k_results = {}
     for k in k_values:
         all_maj_ks = [] # one element for one question
         all_pass_ks = []
@@ -78,13 +79,14 @@ def main():
             all_maj_ks.append(sum(q_maj_ks) / len(q_maj_ks))
 
             # Calculate pass@k
-            q_scores = [get_most_common_pred(q_preds[i],last=False) == q_gt for i in range(n)]
+            q_scores = [get_most_common_pred(q_preds[i], last=False) == q_gt for i in range(n)]
             all_pass_ks.append(pass_at_k(n, sum(q_scores), k))
 
-        results[f"maj@{k}"] = float(f"{np.mean(all_maj_ks):.4f}") 
-        results[f"pass@{k}"] = float(f"{np.mean(all_pass_ks):.4f}")
+        maj_k_results[f"maj@{k}"] = float(f"{np.mean(all_maj_ks):.4f}") 
+        pass_k_results[f"pass@{k}"] = float(f"{np.mean(all_pass_ks):.4f}")
 
-    print(results)
+    print(pass_k_results)
+    print(maj_k_results)
 
 
 if __name__ == "__main__":
