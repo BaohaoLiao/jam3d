@@ -60,7 +60,7 @@ def main():
             for n_idx in range(n):
                 tmp = []
 
-                # different n might have different H
+                # different n might have different H, must include the last index
                 if args.h_chunks == -1:
                     H_indices = np.arange(len(q_sub_preds[n_idx]))
                 else:
