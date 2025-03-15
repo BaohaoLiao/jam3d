@@ -37,16 +37,20 @@ def sample_h_predictions(predictions, h_chunks):
     """
     Evenly samples h_chunks always includes the last chunk, 
     """
-    H = len(predictions)
-    indices = np.linspace(H-1, H//h_chunks-1, h_chunks, dtype=int)[::-1]
-    return [predictions[i] for i in indices]
+    if h_chunks == -1:
+        return predictions
+    else:
+        H = len(predictions)
+        indices = np.linspace(H-1, H//h_chunks-1, h_chunks, dtype=int)[::-1]
+        return [predictions[i] for i in indices]
 
 
 def main():
     parser = argparse.ArgumentParser(description='Calculate pass@k and maj@k in the dimension of n.')
     parser.add_argument('--input_file', type=str, required=True, help='Path to the evaluation output JSONL file')
     parser.add_argument("--k_values", type=str, default="1,2,4,8", help='k value for maj@k and pass@k calculation')
-    parser.add_argument('--h_chunks', type=int, default=1, help='Number of chunks to use from H dimension')
+    parser.add_argument('--h_chunks', type=int, default=1, 
+                        help='Number of chunks to use from H dimension. If -1, use all predictions in the H dimension.')
     parser.add_argument('--m_answers', type=int, default=1, help='Number of answers to use from m dimension')
     args = parser.parse_args()
     

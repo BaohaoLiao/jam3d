@@ -38,6 +38,8 @@ def parse_args():
 
     # 3D maj
     parser.add_argument("--n_sampling", default=1, type=int, help="I.e. n")
+    parser.add_argument("--start_token_idx", default=0, type=int,
+                        help="Starting token index for reasoning path chunking. Default is 0 (start from beginning).")
     parser.add_argument("--num_think_chunks", default=1, type=int,
                         help="Evenly split the original think into multiple chunks, i.e. H")
     parser.add_argument("--max_tokens_per_think_chunk", default=0, type=int,
@@ -89,6 +91,8 @@ def prepare_data(data_name, args):
 
     # get out_file name
     chunk_param = f"H{args.num_think_chunks}"  if args.max_tokens_per_think_chunk <= 0 else f"tokPerChunk{args.max_tokens_per_think_chunk}"
+    if args.start_token_idx > 0:
+        chunk_param += f"_startTok{args.start_token_idx}"
     out_file_prefix = f"{args.split}_{args.prompt_type}_seed{args.seed}_t{args.temperature}_len{args.max_tokens_per_call}"
     output_dir = args.output_dir
     if not os.path.exists(output_dir):
@@ -364,9 +368,7 @@ def main(llm, tokenizer, data_name, args):
                 chunk_maj_preds, \
                 chunk_maj_scores, \
                 sample_maj_preds, \
-                sample_maj_scores = obtain_3d_sub_scores_and_preds(
-                    sample["gt"], sample_results
-                )
+                sample_maj_scores = obtain_3d_sub_scores_and_preds(sample["gt"], sample_results)
             
             sample.pop("gt")
             sample.update({
@@ -448,9 +450,7 @@ def main(llm, tokenizer, data_name, args):
                 chunk_maj_preds, \
                 chunk_maj_scores, \
                 sample_maj_preds, \
-                sample_maj_scores = obtain_3d_sub_scores_and_preds(
-                    sample["gt"], sample_results
-                )
+                sample_maj_scores = obtain_3d_sub_scores_and_preds(sample["gt"], sample_results)
             
             sample.pop("gt")
             sample.update({
@@ -473,17 +473,46 @@ def main(llm, tokenizer, data_name, args):
         # Determine how to chunk the reasoning
         all_splits = []
         for r, reasoning_tokens in enumerate(reasonings_tok):
+            # Skip if empty reasoning
+            if len(reasoning_tokens) == 0:
+                all_splits.append([])
+                continue
+                
+            # Apply start_token_idx - only process tokens after this index
+            if args.start_token_idx > 0:
+                if args.start_token_idx < len(reasoning_tokens):
+                    reasoning_tokens = reasoning_tokens[args.start_token_idx:]
+                else:
+                    # If start_token_idx is beyond the length of tokens, use an empty list
+                    reasoning_tokens = []
+            
+            if len(reasoning_tokens) == 0:
+                all_splits.append([])
+                continue
+                
             if args.max_tokens_per_think_chunk > 0:
                 # Token-based chunking
                 num_chunks = max(1, math.ceil(len(reasoning_tokens) / args.max_tokens_per_think_chunk))
                 splits = []
                 for i in range(1, num_chunks):
                     chunk_size = min(i * args.max_tokens_per_think_chunk, len(reasoning_tokens))
-                    splits.append(reasoning_tokens[:chunk_size])
+                    # Create the full token sequence: start_tokens + chunk_tokens
+                    if args.start_token_idx > 0:
+                        full_tokens = reasonings_tok[r][:args.start_token_idx] + reasoning_tokens[:chunk_size]
+                    else:
+                        full_tokens = reasoning_tokens[:chunk_size]
+                    splits.append(full_tokens)
             else:
                 # Original fixed-number chunking approach
-                splits = [reasoning_tokens[: i * len(reasoning_tokens) // args.num_think_chunks] 
-                         for i in range(1, args.num_think_chunks)]
+                splits = []
+                for i in range(1, args.num_think_chunks):
+                    chunk_size = i * len(reasoning_tokens) // args.num_think_chunks
+                    # Create the full token sequence: start_tokens + chunk_tokens
+                    if args.start_token_idx > 0:
+                        full_tokens = reasonings_tok[r][:args.start_token_idx] + reasoning_tokens[:chunk_size]
+                    else:
+                        full_tokens = reasoning_tokens[:chunk_size]
+                    splits.append(full_tokens)
             
             all_splits.append(splits)
 
@@ -607,9 +636,7 @@ def main(llm, tokenizer, data_name, args):
                 chunk_maj_preds, \
                 chunk_maj_scores, \
                 sample_maj_preds, \
-                sample_maj_scores = obtain_3d_sub_scores_and_preds(
-                    sample["gt"], sample_results
-                )
+                sample_maj_scores = obtain_3d_sub_scores_and_preds(sample["gt"], sample_results)
             
             sample.pop("gt")
             sample.update({
@@ -625,7 +652,7 @@ def main(llm, tokenizer, data_name, args):
             })
             all_samples.append(sample)
         
-        
+
     # Process and calculate overall scores
     all_samples, result_json = obtain_3d_scores(samples=all_samples, n_sampling=args.n_sampling)
     print(result_json)
