@@ -87,7 +87,7 @@ def main():
 
             # Calculate pass@k
             #q_scores = [get_most_common_pred(q_preds[i], last=False) == q_gt for i in range(n)]
-            q_scores = [sum([q_pred == q_gt for q_pred in q_preds[i]]) for i in range(n)]
+            q_scores = [sum([q_pred == q_gt for q_pred in q_preds[i]])>=1 for i in range(n)]
             all_pass_ks.append(pass_at_k(n, sum(q_scores), k))
 
         maj_k_results[f"maj@{k}"] = float(f"{np.mean(all_maj_ks):.4f}") 
