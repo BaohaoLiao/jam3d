@@ -61,7 +61,7 @@ def main():
                 tmp = []
 
                 # different n might have different H
-                if arg.h_chunks == -1:
+                if args.h_chunks == -1:
                     H_indices = np.arange(len(q_sub_preds[n_idx]))
                 else:
                     H_indices = np.linspace(H-1, H//args.h_chunks-1, args.h_chunks, dtype=int)[::-1]
