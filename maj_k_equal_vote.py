@@ -10,7 +10,8 @@ def main():
     parser = argparse.ArgumentParser(description='Calculate pass@k and maj@k in the dimension of n.')
     parser.add_argument('--input_file', type=str, required=True, help='Path to the evaluation output JSONL file')
     parser.add_argument("--k_values", type=str, default="1,2,4,8", help='k value for maj@k and pass@k calculation')
-    parser.add_argument('--h_chunks', type=int, default=1, help='Number of chunks to use from H dimension')
+    parser.add_argument('--h_chunks', type=int, default=1, 
+                        help='Number of chunks to use from H dimension. If -1, use all predictions at H dimension.')
     parser.add_argument('--m_answers', type=int, default=1, help='Number of answers to use from m dimension')
     args = parser.parse_args()
     
@@ -54,11 +55,17 @@ def main():
             q_gt = all_gts[q_idx]
 
             # reshape to n x h_chunks*m_answers
-            H_indices = np.linspace(H-1, H//args.h_chunks-1, args.h_chunks, dtype=int)[::-1]
             m_indices = np.arange(args.m_answers)
             q_preds = [] # n x h_chunks*m_answers
             for n_idx in range(n):
                 tmp = []
+
+                # different n might have different H
+                if arg.h_chunks == -1:
+                    H_indices = np.arange(len(q_sub_preds[n_idx]))
+                else:
+                    H_indices = np.linspace(H-1, H//args.h_chunks-1, args.h_chunks, dtype=int)[::-1]
+
                 for h_idx in H_indices:
                     for m_idx in m_indices:
                         tmp.append(q_sub_preds[n_idx][h_idx][m_idx])
