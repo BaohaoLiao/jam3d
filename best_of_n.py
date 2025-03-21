@@ -11,8 +11,8 @@ def scalar_from_reward_list(reward_list, use_last=False, use_min=False, use_prod
         return 0.0
     
     # Handle edge case for skipped samples (too long)
-    if len(reward_list) == 1 and reward_list[0] == -1:
-        return -1.0
+    if len(reward_list) == 1 and reward_list[0] == -100:
+        return -100
     
     if use_last:
         return reward_list[-1]

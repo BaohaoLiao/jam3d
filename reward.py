@@ -29,20 +29,28 @@ def save_jsonl(data, file_path):
             filtered_item = {field: item[field] for field in fields_to_keep if field in item}
             f.write(json.dumps(filtered_item) + '\n')
 
-def create_messages(query, response):
+def create_messages(query, response, is_prm):
     """Create messages for the reward model."""
     response = response.strip()
-    return [
-        {"role": "system", "content": "Please reason step by step, and put your final answer within \\boxed{}."},
-        {"role": "user", "content": query},
-        {"role": "assistant", "content": "<extra_0>".join(response.split("\n\n")) + "<extra_0>"},
-    ]
+    if is_prm:
+        return [
+            {"role": "system", "content": "Please reason step by step, and put your final answer within \\boxed{}."},
+            {"role": "user", "content": query},
+            {"role": "assistant", "content": "<extra_0>".join(response.split("\n\n")) + "<extra_0>"},
+        ]
+    else:
+        return [
+            {"role": "system", "content": "Please reason step by step, and put your final answer within \\boxed{}."},
+            {"role": "user", "content": query},
+            {"role": "assistant", "content": response},
+        ]
+
 
 def batch_items(items, batch_size):
     """Split items into batches."""
     return [items[i:i + batch_size] for i in range(0, len(items), batch_size)]
 
-def process_think_sums(samples, reward_model, tokenizer, batch_size, max_model_len):
+def process_think_sums(samples, reward_model, tokenizer, batch_size, max_model_len, is_prm):
     """Process all think_sums across samples and calculate rewards."""
     print("Preparing data for reward scoring...")
     
@@ -60,7 +68,7 @@ def process_think_sums(samples, reward_model, tokenizer, batch_size, max_model_l
             for h_idx, h_chunk in enumerate(n_sample):
                 for m_idx, response in enumerate(h_chunk):
                     # Create messages to check token length
-                    messages = create_messages(query, response)
+                    messages = create_messages(query, response, is_prm)
                     conversation_str = tokenizer.apply_chat_template(
                         messages, 
                         tokenize=False, 
@@ -68,7 +76,7 @@ def process_think_sums(samples, reward_model, tokenizer, batch_size, max_model_l
                     )
                     
                     # Check if this conversation exceeds the model's max length
-                    token_length = len(tokenizer.encode(conversation_str))
+                    token_length = len(tokenizer.encode(conversation_str, add_special_tokens=False))
                     if token_length > max_model_len:
                         print(f"Skipping conversation at index ({sample_idx}, {n_idx}, {h_idx}, {m_idx}) - Length: {token_length} tokens")
                         skipped_indices.append((sample_idx, n_idx, h_idx, m_idx))
@@ -84,7 +92,7 @@ def process_think_sums(samples, reward_model, tokenizer, batch_size, max_model_l
     # Prepare conversation strings for reward model
     all_conversations = []
     for query, response in zip(all_queries, all_responses):
-        messages = create_messages(query, response)
+        messages = create_messages(query, response, is_prm)
         conversation_str = tokenizer.apply_chat_template(
             messages, 
             tokenize=False, 
@@ -104,7 +112,11 @@ def process_think_sums(samples, reward_model, tokenizer, batch_size, max_model_l
         
         # Process rewards
         for reward in rewards:
-            reward_scores.append(reward.outputs.data[:, -1].numpy())
+            if is_prm:
+                reward_scores.append(reward.outputs.data[:, -1].numpy())
+            else:
+                # orm
+                reward_scores.append(reward.outputs.data[-1].numpy())
 
     # Rebuild the think_sums_rewards with the same structure as think_sums
     for sample in samples:
@@ -124,7 +136,7 @@ def process_think_sums(samples, reward_model, tokenizer, batch_size, max_model_l
 
     # Set [-1] for skipped conversations (too long)
     for sample_idx, n_idx, h_idx, m_idx in skipped_indices:
-        samples[sample_idx]["think_sums_rewards"][n_idx][h_idx][m_idx] = [-1.0]
+        samples[sample_idx]["think_sums_rewards"][n_idx][h_idx][m_idx] = [-100.0]
     
     return samples
 
@@ -152,7 +164,7 @@ def main(args):
     tokenizer = llm.get_tokenizer()
     
     # Process and score all think_sums
-    scored_samples = process_think_sums(samples, llm, tokenizer, args.batch_size, args.max_model_len)
+    scored_samples = process_think_sums(samples, llm, tokenizer, args.batch_size, args.max_model_len, args.is_prm)
     
     # Save the results
     print(f"Saving scored data to {args.output_file}")
@@ -161,6 +173,10 @@ def main(args):
 
 if __name__ == "__main__":
     args = parse_args()
+    args.is_prm = False # PRM or ORM
+    if "prm" in args.model_name_or_path.lower():
+        args.is_prm = True
+
     print("="*25,  " arguments ", "="*25)
     for arg, value in vars(args).items():
         print(f"  {arg}: {value}")
