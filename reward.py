@@ -1,8 +1,8 @@
 import os
 import json
 import argparse
-from tqdm import tqdm
 from vllm import LLM
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Score outputs using a reward model')
@@ -10,7 +10,7 @@ def parse_args():
     parser.add_argument('--output_file', type=str, help='Path to save scored outputs (default: input_file with _scored suffix)')
     parser.add_argument('--model_name_or_path', type=str, required=True, help='Reward model path or name')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
-    parser.add_argument('--batch_size', type=int, default=16, help='Batch size for scoring')
+    parser.add_argument('--max_num_seqs', type=int, default=128, help='Batch size for scoring')
     parser.add_argument('--max_model_len', type=int, default=4090, help='Set the reward to -1 for longer message.')
     return parser.parse_args()
 
@@ -46,11 +46,7 @@ def create_messages(query, response, is_prm):
         ]
 
 
-def batch_items(items, batch_size):
-    """Split items into batches."""
-    return [items[i:i + batch_size] for i in range(0, len(items), batch_size)]
-
-def process_think_sums(samples, reward_model, tokenizer, batch_size, max_model_len, is_prm):
+def process_think_sums(samples, reward_model, tokenizer, max_model_len, is_prm):
     """Process all think_sums across samples and calculate rewards."""
     print("Preparing data for reward scoring...")
     
@@ -102,21 +98,16 @@ def process_think_sums(samples, reward_model, tokenizer, batch_size, max_model_l
     
     # Score in batches
     print("Scoring with reward model...")
+    rewards = reward_model.encode(all_conversations)
+    rewards = sorted(rewards, key=lambda x: int(x.request_id))
+    # Process rewards
     reward_scores = []
-    
-    batched_conversations = batch_items(all_conversations, batch_size)
-    for batch in tqdm(batched_conversations):
-        # Get rewards
-        rewards = reward_model.encode(batch)
-        rewards = sorted(rewards, key=lambda x: int(x.request_id))
-        
-        # Process rewards
-        for reward in rewards:
-            if is_prm:
-                reward_scores.append(reward.outputs.data[:, -1].numpy())
-            else:
-                # orm
-                reward_scores.append(reward.outputs.data[-1].numpy())
+    for reward in rewards:
+        if is_prm:
+            reward_scores.append(reward.outputs.data[:, -1].numpy())
+        else:
+            # orm
+            reward_scores.append(reward.outputs.data[-1].numpy())
 
     # Rebuild the think_sums_rewards with the same structure as think_sums
     for sample in samples:
@@ -160,11 +151,12 @@ def main(args):
         gpu_memory_utilization=0.95,
         seed=args.seed,
         task="reward",
+        max_num_seqs=args.max_num_seqs,
     )
     tokenizer = llm.get_tokenizer()
     
     # Process and score all think_sums
-    scored_samples = process_think_sums(samples, llm, tokenizer, args.batch_size, args.max_model_len, args.is_prm)
+    scored_samples = process_think_sums(samples, llm, tokenizer, args.max_model_len, args.is_prm)
     
     # Save the results
     print(f"Saving scored data to {args.output_file}")
