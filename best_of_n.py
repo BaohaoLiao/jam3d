@@ -3,12 +3,13 @@ import argparse
 import numpy as np
 from tqdm import tqdm
 from pass_k import pass_at_k
+from maj_k import get_most_common_pred
 
 
 def scalar_from_reward_list(reward_list, use_last=False, use_min=False, use_prod=False):
     """Convert a list of reward scores to a scalar value based on specified flags."""
     if not reward_list:
-        return 0.0
+        return -100
     
     # Handle edge case for skipped samples (too long)
     if len(reward_list) == 1 and reward_list[0] == -100:
@@ -32,11 +33,11 @@ def get_highest_reward_pred(preds, rewards):
     rewards: list of corresponding reward scores
     """
     if not preds or not rewards:
-        return None
+        return ""
     # Filter out skipped samples (reward == -1)
     valid_pairs = [(p, r) for p, r in zip(preds, rewards) if p != "" and r != -1]
     if not valid_pairs:
-        return None
+        return ""
     
     # Sort by reward score in descending order
     sorted_pairs = sorted(valid_pairs, key=lambda x: x[1], reverse=True)
@@ -100,10 +101,12 @@ def main():
     
     reward_k_results = {}
     pass_k_results = {}
+    maj_k_results = {}
     
     for k in k_values:
         all_reward_ks = []  # one element for one question
         all_pass_ks = []
+        all_maj_ks = []
 
         for q_idx in tqdm(range(num_qs), desc=f"Processing k={k}"):
             q_sub_preds = all_sub_preds[q_idx]  # n x H x m
@@ -165,16 +168,32 @@ def main():
                 all_reward_ks.append(0.0)
                 
             # Calculate pass@k: for each question, choose one pred in Hxm with the highest reward
-            q_scores = [get_highest_reward_pred(q_preds[i], q_scalar_rewards[i]) == q_gt for i in range(n)]
+            q_best_preds =[get_highest_reward_pred(q_preds[i], q_scalar_rewards[i]) for i in range(n)]
+            q_scores = [q_best_preds[i] == q_gt for i in range(n)]
             all_pass_ks.append(pass_at_k(n, sum(q_scores), k))
+
+            # Calculate maj@k for different sliding windows, small variance
+            q_maj_ks = []
+            for start_idx in range(n - k + 1):
+                # Get predictions from k samples using the last chunk and first answer
+                q_window_preds = [q_best_preds[start_idx + i] for i in range(k)]
+                
+                # Get majority prediction for this window
+                q_maj_pred = get_most_common_pred(q_window_preds, last=False)
+
+                q_maj_ks.append(True if q_maj_pred == q_gt else False)
+
+            all_maj_ks.append(sum(q_maj_ks) / len(q_maj_ks))
 
         # Calculate and store average metrics across all questions
         reward_k_results[f"BoN@{k}"] = float(f"{np.mean(all_reward_ks):.4f}")
         pass_k_results[f"pass@{k}"] = float(f"{np.mean(all_pass_ks):.4f}")
+        maj_k_results[f"maj@{k}"] = float(f"{np.mean(all_maj_ks):.4f}") 
 
     print("\nResults:")
     print("Pass@k results:", pass_k_results)
-    print("Reward@k results:", reward_k_results)
+    print("BoN@k results:", reward_k_results)
+    print("Maj@k results:", maj_k_results)
 
 if __name__ == "__main__":
     main()
