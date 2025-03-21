@@ -180,4 +180,5 @@ if __name__ == "__main__":
     print("="*25,  " arguments ", "="*25)
     for arg, value in vars(args).items():
         print(f"  {arg}: {value}")
+    print()
     main(args)
