@@ -11,6 +11,7 @@ def parse_args():
     parser.add_argument('--model_name_or_path', type=str, required=True, help='Reward model path or name')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size for scoring')
+    parser.add_argument('--max_model_len', type=int, default=4090, help='Set the reward to -1 for longer message.')
     return parser.parse_args()
 
 def load_jsonl(file_path):
@@ -20,9 +21,13 @@ def load_jsonl(file_path):
 
 def save_jsonl(data, file_path):
     """Save data to a JSONL file."""
+    fields_to_keep = ["idx", "think_sums_rewards", "gt", "all_sub_preds", "all_sub_scores"]
+    
     with open(file_path, 'w', encoding='utf-8') as f:
         for item in data:
-            f.write(json.dumps(item) + '\n')
+            # Create a new dictionary with only the required fields
+            filtered_item = {field: item[field] for field in fields_to_keep if field in item}
+            f.write(json.dumps(filtered_item) + '\n')
 
 def create_messages(query, response):
     """Create messages for the reward model."""
@@ -36,7 +41,7 @@ def batch_items(items, batch_size):
     """Split items into batches."""
     return [items[i:i + batch_size] for i in range(0, len(items), batch_size)]
 
-def process_think_sums(samples, reward_model, tokenizer, batch_size):
+def process_think_sums(samples, reward_model, tokenizer, batch_size, max_model_len):
     """Process all think_sums across samples and calculate rewards."""
     print("Preparing data for reward scoring...")
     
@@ -44,7 +49,8 @@ def process_think_sums(samples, reward_model, tokenizer, batch_size):
     all_queries = []
     all_responses = []
     all_indices = []  # Track (sample_idx, n_idx, h_idx, m_idx)
-    
+    skipped_indices = []  # Track indices that exceed max length
+
     for sample_idx, sample in enumerate(samples):
         query = sample["question"]  # The original question
         think_sums = sample["think_sums"]  # 3D structure [n, H, m]
@@ -52,11 +58,27 @@ def process_think_sums(samples, reward_model, tokenizer, batch_size):
         for n_idx, n_sample in enumerate(think_sums):
             for h_idx, h_chunk in enumerate(n_sample):
                 for m_idx, response in enumerate(h_chunk):
+                    # Create messages to check token length
+                    messages = create_messages(query, response)
+                    conversation_str = tokenizer.apply_chat_template(
+                        messages, 
+                        tokenize=False, 
+                        add_generation_prompt=False
+                    )
+                    
+                    # Check if this conversation exceeds the model's max length
+                    token_length = len(tokenizer.encode(conversation_str))
+                    if token_length > max_model_len:
+                        print(f"Skipping conversation at index ({sample_idx}, {n_idx}, {h_idx}, {m_idx}) - Length: {token_length} tokens")
+                        skipped_indices.append((sample_idx, n_idx, h_idx, m_idx))
+                        continue
+                    
                     all_queries.append(query)
                     all_responses.append(response)
                     all_indices.append((sample_idx, n_idx, h_idx, m_idx))
-    
+
     print(f"Total responses to score: {len(all_responses)}")
+    print(f"Skipped responses (too long): {len(skipped_indices)}")
     
     # Prepare conversation strings for reward model
     all_conversations = []
@@ -97,6 +119,10 @@ def process_think_sums(samples, reward_model, tokenizer, batch_size):
     # Fill in the rewards using the tracked indices
     for (sample_idx, n_idx, h_idx, m_idx), reward in zip(all_indices, reward_scores):
         samples[sample_idx]["think_sums_rewards"][n_idx][h_idx][m_idx] = list(reward)
+
+    # Set [-1] for skipped conversations (too long)
+    for sample_idx, n_idx, h_idx, m_idx in skipped_indices:
+        samples[sample_idx]["think_sums_rewards"][n_idx][h_idx][m_idx] = [-1]
     
     return samples
 
@@ -125,19 +151,10 @@ def main(args):
     
     # Process and score all think_sums
     scored_samples = process_think_sums(samples, llm, tokenizer, args.batch_size)
-
-    all_samples = []
-    # Delete some unnecessary fields
-    for sample in scored_samples:
-        for key in sample.keys():
-            if key not in ["idx", "gt", "all_sub_preds",  "all_sub_scores", "think_sums_rewards"]:
-                sample.pop(key)
-
-        all_samples.append(sample)
     
     # Save the results
     print(f"Saving scored data to {args.output_file}")
-    save_jsonl(all_samples, args.output_file)
+    save_jsonl(scored_samples, args.output_file)
     print("Done!")
 
 if __name__ == "__main__":
