@@ -54,13 +54,13 @@ def main():
             q_sub_preds = all_sub_preds[q_idx]  # n x H x m
             q_gt = all_gts[q_idx]
 
-            # reshape to n x h_chunks*m_answers
+            # Reshape to n x h_chunks*m_answers
             m_indices = np.arange(args.m_answers)
             q_preds = [] # n x h_chunks*m_answers
             for n_idx in range(n):
                 tmp = []
 
-                # different n might have different H, must include the last index
+                # Different n might have different H, must include the last index
                 if args.h_chunks == -1:
                     H_indices = np.arange(len(q_sub_preds[n_idx]))
                 else:
