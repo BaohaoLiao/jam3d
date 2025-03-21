@@ -104,7 +104,8 @@ def main(args):
     # Set default output file if not provided
     if not args.output_file:
         base_name = os.path.splitext(args.input_file)[0]
-        args.output_file = f"{base_name}_rm{args.model_name_or_path.split("/")[-1]}_scored.jsonl"
+        model_name = args.model_name_or_path.split("/")[-1]
+        args.output_file = f"{base_name}_rm{model_name}_scored.jsonl"
     
     print(f"Loading data from {args.input_file}")
     samples = load_jsonl(args.input_file)
