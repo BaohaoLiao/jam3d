@@ -150,7 +150,7 @@ def main(args):
     tokenizer = llm.get_tokenizer()
     
     # Process and score all think_sums
-    scored_samples = process_think_sums(samples, llm, tokenizer, args.batch_size)
+    scored_samples = process_think_sums(samples, llm, tokenizer, args.batch_size, args.max_model_len)
     
     # Save the results
     print(f"Saving scored data to {args.output_file}")
