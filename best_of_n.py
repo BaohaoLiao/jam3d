@@ -108,7 +108,7 @@ def main():
         all_pass_ks = []
         all_maj_ks = []
 
-        for q_idx in tqdm(range(num_qs), desc=f"Processing k={k}"):
+        for q_idx in range(num_qs):
             q_sub_preds = all_sub_preds[q_idx]  # n x H x m
             q_rewards = all_rewards[q_idx]      # n x H x m
             q_gt = all_gts[q_idx]
