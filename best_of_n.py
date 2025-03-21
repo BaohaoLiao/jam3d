@@ -60,7 +60,7 @@ def main():
     
     args = parser.parse_args()
     
-    print("=" * 50)
+    print("="*25, " arguments ", "="*25)
     for arg, value in vars(args).items():
         print(f"  {arg}: {value}")
     print()
@@ -97,7 +97,6 @@ def main():
     print(f"  n: {n}")
     print(f"  H: {H}")
     print(f"  m: {m}")
-    print("=" * 50)
     
     reward_k_results = {}
     pass_k_results = {}
