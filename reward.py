@@ -31,6 +31,7 @@ def save_jsonl(data, file_path):
 
 def create_messages(query, response):
     """Create messages for the reward model."""
+    response = response.strip()
     return [
         {"role": "system", "content": "Please reason step by step, and put your final answer within \\boxed{}."},
         {"role": "user", "content": query},
