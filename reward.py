@@ -9,7 +9,6 @@ def parse_args():
     parser.add_argument('--input_file', type=str, required=True, help='Path to the output file (JSONL) to score')
     parser.add_argument('--output_file', type=str, help='Path to save scored outputs (default: input_file with _scored suffix)')
     parser.add_argument('--model_name_or_path', type=str, required=True, help='Reward model path or name')
-    parser.add_argument('--tensor_parallel_size', type=int, default=1, help='Tensor parallel size for model')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size for scoring')
     return parser.parse_args()
