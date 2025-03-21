@@ -103,7 +103,7 @@ def process_think_sums(samples, reward_model, tokenizer, batch_size, max_model_l
         
         # Process rewards
         for reward in rewards:
-            reward_scores.append(list(reward.outputs.data[:, -1].numpy()))
+            reward_scores.append(reward.outputs.data[:, -1].numpy())
 
     # Rebuild the think_sums_rewards with the same structure as think_sums
     for sample in samples:
@@ -118,11 +118,12 @@ def process_think_sums(samples, reward_model, tokenizer, batch_size, max_model_l
 
     # Fill in the rewards using the tracked indices
     for (sample_idx, n_idx, h_idx, m_idx), reward in zip(all_indices, reward_scores):
-        samples[sample_idx]["think_sums_rewards"][n_idx][h_idx][m_idx] = list(reward)
+        # Convert any numpy/tensor values to native Python types
+        samples[sample_idx]["think_sums_rewards"][n_idx][h_idx][m_idx] = [float(r) for r in reward]
 
     # Set [-1] for skipped conversations (too long)
     for sample_idx, n_idx, h_idx, m_idx in skipped_indices:
-        samples[sample_idx]["think_sums_rewards"][n_idx][h_idx][m_idx] = [-1]
+        samples[sample_idx]["think_sums_rewards"][n_idx][h_idx][m_idx] = [-1.0]
     
     return samples
 
