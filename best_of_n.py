@@ -216,10 +216,12 @@ def main():
                 
             # Calculate pass@k: for each question, choose one pred in Hxm with the highest reward
 
+            """
             print("|||"*50, q_idx)
             for i in range(n):
                 print(q_gt)
-                print(get_highest_reward_pred(q_preds[i], q_scalar_rewards[i]))
+                print(get_highest_reward_pred(q_preds[i], q_scalar_rewards[i]))"
+            """
 
 
             q_best_preds =[get_highest_reward_pred(q_preds[i], q_scalar_rewards[i])[0] for i in range(n)]
