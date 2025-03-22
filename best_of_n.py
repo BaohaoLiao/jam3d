@@ -42,7 +42,7 @@ def get_highest_reward_pred(preds, rewards):
     # Sort by reward score in descending order
     sorted_pairs = sorted(valid_pairs, key=lambda x: x[1], reverse=True)
     # Return the prediction with the highest reward
-    return sorted_pairs[0][0]
+    return sorted_pairs[0][0], sorted_pairs[0][1]
 
 
 def main():
@@ -153,7 +153,7 @@ def main():
                     window_rewards.extend(q_scalar_rewards[start_idx + i])
                 
                 # Get prediction with highest reward in this window
-                best_pred = get_highest_reward_pred(window_preds, window_rewards)
+                best_pred = get_highest_reward_pred(window_preds, window_rewards)[0]
                 
                 if best_pred is not None:
                     q_reward_ks.append(True if best_pred == q_gt else False)
@@ -167,7 +167,14 @@ def main():
                 all_reward_ks.append(0.0)
                 
             # Calculate pass@k: for each question, choose one pred in Hxm with the highest reward
-            q_best_preds =[get_highest_reward_pred(q_preds[i], q_scalar_rewards[i]) for i in range(n)]
+
+            print("|||"*50, q_idx)
+            for i in range(n):
+                print(q_gt)
+                print(get_highest_reward_pred(q_preds[i], q_scalar_rewards[i]))
+
+
+            q_best_preds =[get_highest_reward_pred(q_preds[i], q_scalar_rewards[i])[0] for i in range(n)]
             q_scores = [q_best_preds[i] == q_gt for i in range(n)]
             all_pass_ks.append(pass_at_k(n, sum(q_scores), k))
 
