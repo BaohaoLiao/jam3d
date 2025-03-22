@@ -1,9 +1,10 @@
 import json
 import argparse
 import numpy as np
-from tqdm import tqdm
+from collections import Counter
 from pass_k import pass_at_k
 from maj_k import get_most_common_pred
+
 
 
 def scalar_from_reward_list(reward_list, use_last=False, use_min=False, use_prod=False):
@@ -25,17 +26,17 @@ def scalar_from_reward_list(reward_list, use_last=False, use_min=False, use_prod
         # Default: use the mean
         return np.mean(reward_list)
 
-
+"""
 def get_highest_reward_pred(preds, rewards):
-    """
+
     Get the prediction with the highest reward score.
     preds: list of predictions
     rewards: list of corresponding reward scores
-    """
+
     if not preds or not rewards:
         return ""
     # Filter out skipped samples (reward == -1)
-    valid_pairs = [(p, r) for p, r in zip(preds, rewards) if p != "" and r != -1]
+    valid_pairs = [(p, r) for p, r in zip(preds, rewards) if p != "" and r != -100]
     if not valid_pairs:
         return ""
     
@@ -43,6 +44,53 @@ def get_highest_reward_pred(preds, rewards):
     sorted_pairs = sorted(valid_pairs, key=lambda x: x[1], reverse=True)
     # Return the prediction with the highest reward
     return sorted_pairs[0][0], sorted_pairs[0][1]
+"""
+
+def get_highest_reward_pred(preds, rewards):
+    """
+    Get the prediction with the highest reward score.
+    If multiple predictions have the same highest score, use frequency across all predictions as a tiebreaker.
+    
+    preds: list of predictions
+    rewards: list of corresponding reward scores
+    """
+    if not preds or not rewards:
+        return "", -100
+    
+    # Filter out skipped samples (reward == -1)
+    valid_pairs = [(p, r) for p, r in zip(preds, rewards) if p != "" and r != -100]
+    
+    if not valid_pairs:
+        return "", -100
+    
+    # Count frequency of all predictions
+    all_pred_counts = Counter([p for p, _ in valid_pairs])
+    
+    # Group predictions by reward score
+    score_to_preds = {}
+    for pred, reward in valid_pairs:
+        if reward not in score_to_preds:
+            score_to_preds[reward] = []
+        if pred not in score_to_preds[reward]:
+            score_to_preds[reward].append(pred)
+    
+    # Find the highest reward score
+    highest_score = max(score_to_preds.keys())
+    
+    # Get all predictions with the highest score
+    top_preds = score_to_preds[highest_score]
+    
+    # If only one prediction has the highest score, return it
+    if len(top_preds) == 1:
+        return top_preds[0], highest_score
+    
+    # If multiple predictions have the highest score, use frequency across all predictions as tiebreaker
+    top_pred_with_count = [(pred, all_pred_counts[pred]) for pred in set(top_preds)]
+    top_pred_with_count.sort(key=lambda x: x[1], reverse=True)
+    
+    # Return the most frequent prediction among the top ones
+    return top_pred_with_count[0][0], highest_score
+
 
 
 def main():
