@@ -21,12 +21,20 @@ def load_jsonl(file_path):
 
 def save_jsonl(data, file_path):
     """Save data to a JSONL file."""
-    fields_to_keep = ["idx", "think_sums_rewards", "gt", "all_sub_preds", "all_sub_scores"]
+    fields_to_keep = ["idx", "think_sums_rewards", "gt", "all_sub_preds", "all_sub_scores", "sub_preds", "sub_scores"]
     
     with open(file_path, 'w', encoding='utf-8') as f:
         for item in data:
             # Create a new dictionary with only the required fields
-            filtered_item = {field: item[field] for field in fields_to_keep if field in item}
+            filtered_item = {}
+            for field in fields_to_keep:
+                if field in item:
+                    if field == "sub_preds" or field == "sub_scores":
+                        filtered_item["all_" + field] = item[field]
+                    else:
+                        filtered_item[field] = item[field]
+
+            #filtered_item = {field: item[field] for field in fields_to_keep if field in item}
             f.write(json.dumps(filtered_item) + '\n')
 
 def create_messages(query, response, is_prm):
