@@ -1,7 +1,6 @@
 import json
 import argparse
 import numpy as np
-from collections import Counter
 from pass_k import pass_at_k
 from maj_k import get_most_common_pred
 
@@ -61,8 +60,10 @@ def main():
                 tmp = []
 
                 # Different n might have different H, must include the last index
-                if args.h_chunks == -1:
+                if args.h_chunks == -1: # use all predictions
                     H_indices = np.arange(len(q_sub_preds[n_idx]))
+                elif args.h_chunks < 0: # use last h_chunks predictions
+                    H_indices = list(range(args.h_chunks, 0))
                 else:
                     H_indices = np.linspace(H-1, H//args.h_chunks-1, args.h_chunks, dtype=int)[::-1]
 
