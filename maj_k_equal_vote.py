@@ -74,7 +74,7 @@ def main():
 
             # Calculate maj@k for different sliding windows, small variance
             q_maj_ks = []
-            for start_idx in range(n - k + 1):
+            for start_idx in range(1): #n - k + 1):
                 q_window_preds = []
                 for i in range(k):
                     q_window_preds.extend(q_preds[start_idx + i])
