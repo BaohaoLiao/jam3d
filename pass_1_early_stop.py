@@ -128,7 +128,7 @@ def main():
                     )
                 else:
                     num_reasoning_tokens = args.start_token_idx + args.max_tokens_per_think_chunk * (early_stop_idx + 1)
-                    assert num_reasoning_tokens < len(tokenizer.encode(all_completions[q][n_i])) - len(tokenizer.encode(all_think_sums[q][n_i][-1]))
+                    assert num_reasoning_tokens < len(tokenizer.encode(all_completions[q][n_i])) - len(tokenizer.encode(all_think_sums[q][n_i][-1])), print(num_reasoning_tokens, len(tokenizer.encode(all_completions[q][n_i])) - len(tokenizer.encode(all_think_sums[q][n_i][-1])))
 
                     sample_tokens.append(
                         num_reasoning_tokens + sum([len(tokenizer.encode(think_sum)) for think_sum in all_think_sums[q][n_i][:(early_stop_idx+1)]])
