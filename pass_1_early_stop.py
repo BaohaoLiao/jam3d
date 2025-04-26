@@ -104,7 +104,7 @@ def main():
         c = sum([preds[-1] == all_gts[q] for preds in all_sub_preds[q]])
         pass_1s.append(pass_at_k(n, c, 1))
     
-    print(f"Conventional | pass@1: {np.mean(pass_1s):.4f}, #tokens/question: {np.mean(tokens):.4f}")
+    print(f"Conventional | pass@1: {np.mean(pass_1s):.4f}, #tokens/question: {np.mean(tokens):.1f}")
 
     # Early stop
     for c_t in consecutive_thresholds:
@@ -128,7 +128,7 @@ def main():
                     )
                 else:
                     num_reasoning_tokens = args.start_token_idx + args.max_tokens_per_think_chunk * (early_stop_idx + 1)
-                    assert num_reasoning_tokens < len(tokenizer.encode(all_completions[q])) - len(tokenizer.encode(all_think_sums[q][n_i][-1]))
+                    assert num_reasoning_tokens < len(tokenizer.encode(all_completions[q][n_i])) - len(tokenizer.encode(all_think_sums[q][n_i][-1]))
 
                     sample_tokens.append(
                         num_reasoning_tokens + sum([len(tokenizer.encode(think_sum)) for think_sum in all_think_sums[q][n_i][:(early_stop_idx+1)]])
@@ -138,7 +138,7 @@ def main():
             pass_1s_per_ct.append(pass_at_k(n, c, 1))
             tokens_per_ct.append(np.mean(sample_tokens))
         
-        print(f"Same {c_t} consecutive answers | pass@1: {np.mean(pass_1s_per_ct):.4f}, #tokens/question: {np.mean(tokens_per_ct):.4f}")
+        print(f"Same {c_t} consecutive answers | pass@1: {np.mean(pass_1s_per_ct):.4f}, #tokens/question: {np.mean(tokens_per_ct):.1f}")
 
 
 if __name__ == "__main__":
