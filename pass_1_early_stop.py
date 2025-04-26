@@ -101,7 +101,10 @@ def main():
 
     pass_1s = []
     for q in range(num_qs):
-        c = sum([pred[-1] == all_gts[q] for preds in all_sub_preds[q] for pred in preds])
+        try:
+            c = sum([pred[-1] == all_gts[q] for preds in all_sub_preds[q] for pred in preds])
+        except:
+            print(all_sub_preds[q])
         pass_1s.append(pass_at_k(n, c, 1))
     
     print(f"Conventional | pass@1: {np.mean(pass_1s):.4f}, #tokens/question: {np.mean(tokens):.4f}")
