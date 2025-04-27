@@ -167,7 +167,7 @@ def main():
             pass_1s_per_ct.append(pass_at_k(n, c, 1))
             tokens_per_ct.append(np.mean(sample_tokens))
         
-        print(f"Same {c_t} consecutive answers | pass@1: {np.mean(pass_1s_per_ct):.4f}, #tokens/question: {np.mean(tokens_per_ct):.1f}")
+        print(f"Threshold {c_t} | pass@1: {np.mean(pass_1s_per_ct):.4f}, #tokens/question: {np.mean(tokens_per_ct):.1f}")
 
 
 if __name__ == "__main__":
