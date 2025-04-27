@@ -42,7 +42,10 @@ def check_answers(answers, threshold, early_stop_option="consecutive"):
             
             # Check if this answer has reached the threshold
             if answer_counts[answer] >= threshold:
-                return last_indices[answer], answer
+                if last_indices[answer] + 1 == len(answers):
+                    return -1, answer
+                else:
+                    return last_indices[answer], answer
 
     return -1, answers[-1]
 
