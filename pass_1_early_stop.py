@@ -5,7 +5,7 @@ from transformers import AutoTokenizer
 from pass_k import pass_at_k
 
 
-def check_answers(answers, threshold, early_stop_option="consecutive"):
+def check_answers(answers, threshold, max_attempts=None, early_stop_option="consecutive"):
     """
     Check if there are threshold identical answers
     
@@ -16,7 +16,7 @@ def check_answers(answers, threshold, early_stop_option="consecutive"):
     Returns:
         (early_stop_index, final_answer)
     """
-    if len(answers) < threshold:
+    if len(answers) < threshold and (max_attempts is None or len(answers) < max_attempts):
         return -1, answers[-1]
     
     if early_stop_option == "consecutive":
@@ -28,6 +28,7 @@ def check_answers(answers, threshold, early_stop_option="consecutive"):
                     return -1, reference
                 else:
                     return i + threshold - 1, reference
+
     else:
         # Count frequencies of all answers
         answer_counts = {}
@@ -46,6 +47,12 @@ def check_answers(answers, threshold, early_stop_option="consecutive"):
                     return -1, answer
                 else:
                     return last_indices[answer], answer
+                
+            if max_attempts is not None and i + 1  >= max_attempts:
+                if i + 1 == len(answers):
+                    return -1, answer
+                else:
+                    return i, answer
 
     return -1, answers[-1]
 
@@ -56,6 +63,8 @@ def main():
     parser.add_argument('--input_file', type=str, required=True, help='Path to the evaluation output JSONL file')
     parser.add_argument("--thresholds", type=str, default="1,2,3,4")
     parser.add_argument("--early_stop_option", choices=['consecutive', "frequency"], default="consecutive")
+    parser.add_argument("--max_attempts", type=int, default=None,
+                        help="Maximum number of answers to check before stopping anyway")
     parser.add_argument("--start_token_idx", type=int, default=0,
                         help="Starting token index (should match the original script)")
     parser.add_argument("--max_tokens_per_think_chunk", type=int, default=512,
@@ -135,7 +144,7 @@ def main():
             sample_preds = []
             sample_tokens = []
             for n_i in range(n):
-                early_stop_idx, final_pred = check_answers(all_sub_preds[q][n_i], c_t, early_stop_option=args.early_stop_option)
+                early_stop_idx, final_pred = check_answers(all_sub_preds[q][n_i], c_t, early_stop_option=args.early_stop_option, max_attempts=args.max_attempts)
                 sample_preds.append(final_pred)
 
                 if early_stop_idx == -1 and len(all_sub_preds[q][n_i]) == 0: # Same as conventional
