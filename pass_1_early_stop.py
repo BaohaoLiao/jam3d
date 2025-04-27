@@ -35,6 +35,9 @@ def check_answers(answers, threshold, max_attempts=None, early_stop_option="cons
         last_indices = {}
         
         for i, answer in enumerate(answers):
+            if answer == "":
+                continue
+            
             if answer not in answer_counts:
                 answer_counts[answer] = 0
                 
