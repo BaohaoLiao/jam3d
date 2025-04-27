@@ -5,13 +5,13 @@ from transformers import AutoTokenizer
 from pass_k import pass_at_k
 
 
-def check_consecutive_answers(answers, threshold):
+def check_answers(answers, threshold, early_stop_option="consecutive"):
     """
-    Check if there are threshold consecutive identical answers
+    Check if there are threshold identical answers
     
     Args:
         answers: List of answer predictions
-        threshold: Number of consecutive identical answers required
+        threshold: Number of identical answers required
     
     Returns:
         (early_stop_index, final_answer)
@@ -19,15 +19,31 @@ def check_consecutive_answers(answers, threshold):
     if len(answers) < threshold:
         return -1, answers[-1]
     
-    for i in range(len(answers) - threshold + 1):
-        # Check if the next 'threshold' answers are identical
-        reference = answers[i]
-        if all(answers[i + j] == reference for j in range(1, threshold)):
-            if i + threshold == len(answers):
-                return -1, reference
-            else:
-                return i + threshold - 1, reference
-    
+    if early_stop_option == "consecutive":
+        for i in range(len(answers) - threshold + 1):
+            # Check if the next 'threshold' answers are identical
+            reference = answers[i]
+            if all(answers[i + j] == reference for j in range(1, threshold)):
+                if i + threshold == len(answers):
+                    return -1, reference
+                else:
+                    return i + threshold - 1, reference
+    else:
+        # Count frequencies of all answers
+        answer_counts = {}
+        last_indices = {}
+        
+        for i, answer in enumerate(answers):
+            if answer not in answer_counts:
+                answer_counts[answer] = 0
+                
+            answer_counts[answer] += 1
+            last_indices[answer] = i
+            
+            # Check if this answer has reached the threshold
+            if answer_counts[answer] >= threshold:
+                return last_indices[answer], answer
+
     return -1, answers[-1]
 
 
@@ -35,8 +51,8 @@ def main():
     parser = argparse.ArgumentParser(description='Calculate pass@k and maj@k in the dimension of n.')
     parser.add_argument('--model_name_or_path', type=str, required=True)
     parser.add_argument('--input_file', type=str, required=True, help='Path to the evaluation output JSONL file')
-    parser.add_argument("--consecutive_threshold", type=str, default="1,2,3,4",
-                        help="Number of consecutive identical answers required to stop early")
+    parser.add_argument("--thresholds", type=str, default="1,2,3,4")
+    parser.add_argument("--early_stop_option", choices=['consecutive', "frequency"], default="consecutive")
     parser.add_argument("--start_token_idx", type=int, default=0,
                         help="Starting token index (should match the original script)")
     parser.add_argument("--max_tokens_per_think_chunk", type=int, default=512,
@@ -49,7 +65,7 @@ def main():
     print()
 
     # Parse consecutive_threshold
-    consecutive_thresholds = [int(t) for t in args.consecutive_threshold.split(",")]
+    thresholds = [int(t) for t in args.thresholds.split(",")]
 
     # Load samples
     samples = []
@@ -107,7 +123,7 @@ def main():
     print(f"Conventional | pass@1: {np.mean(pass_1s):.4f}, #tokens/question: {np.mean(tokens):.1f}")
 
     # Early stop
-    for c_t in consecutive_thresholds:
+    for c_t in thresholds:
 
         pass_1s_per_ct = []
         tokens_per_ct = []
@@ -116,7 +132,7 @@ def main():
             sample_preds = []
             sample_tokens = []
             for n_i in range(n):
-                early_stop_idx, final_pred = check_consecutive_answers(all_sub_preds[q][n_i], c_t)
+                early_stop_idx, final_pred = check_answers(all_sub_preds[q][n_i], c_t, early_stop_option=args.early_stop_option)
                 sample_preds.append(final_pred)
 
                 if early_stop_idx == -1 and len(all_sub_preds[q][n_i]) == 0: # Same as conventional
