@@ -42,6 +42,23 @@ PROMPT_TEMPLATES = {
         "{output}",
         "\n\n",
     ),
+    "qwen3-think": (
+        "<|im_start|>system\nPlease reason step by step, and put your final answer within \\boxed{{}}.<|im_end|>\n"
+        "<|im_start|>user\n{input}<|im_end|>\n"
+        "<|im_start|>assistant\n<think>\n",
+        "{output}",
+        "\n\n",
+    ),
+    "qwen3-think-choice": (
+        "<|im_start|>user\nAnswer the following multiple choice question. "
+        "The last line of your response should be of the following format: "
+        "'ANSWER: $LETTER' (without quotes) where LETTER is one of ABCD. "
+        "Think step by step before answering.\n\n"
+        "{input}<|im_end|>\n"
+        "<|im_start|>assistant\n<think>\n",
+        "{output}",
+        "\n\n",
+    ),
 }
 
 
