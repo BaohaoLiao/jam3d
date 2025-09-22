@@ -305,12 +305,17 @@ def main(llm, tokenizer, data_name, args):
             except Exception as e:
                 print(f"Error saving think answers: {e}")
 
+    if "gpt-oss" in args.model_name_or_path.lower():
+        thinking_end_tag = "<|end|><|start|>assistant<|channel|>final<|message|>"
+    else:
+        thinking_end_tag = "</think>"
+
     ori_answers = []
     for think_answer in think_answers:
-        if "</think>" not in think_answer:  # answer is not generated
+        if thinking_end_tag not in think_answer:  # answer is not generated
             ori_answers.append(think_answer)
         else:
-            ori_answers.append(think_answer.split("</think>")[-1])
+            ori_answers.append(think_answer.split(thinking_end_tag)[-1])
 
     # For 2D or 3D majority voting
     answer_sampling_params = SamplingParams(
@@ -386,10 +391,10 @@ def main(llm, tokenizer, data_name, args):
         # Generate multiple answers for the full reasoning
         final_prompts = []
         for r, think_answer in enumerate(think_answers):
-            if "</think>" not in think_answer:
-                final_prompt = prompts[r] + think_answer + "\n</think>\n\n"
+            if thinking_end_tag not in think_answer:
+                final_prompt = prompts[r] + think_answer + "\n" + thinking_end_tag
             else:
-                final_prompt = prompts[r] + think_answer.split("</think>")[0] + "</think>"
+                final_prompt = prompts[r] + think_answer.split(thinking_end_tag)[0] + thinking_end_tag
             
             # Add additional prompts for generating more answers (minus 1 because we already have one)
             for _ in range(args.num_answers_per_chunk - 1):
@@ -467,7 +472,7 @@ def main(llm, tokenizer, data_name, args):
     
     # 3D majority voting
     else:
-        reasonings_tok = [tokenizer.encode(think_answer.split("</think>")[0])[1:] for think_answer in think_answers]
+        reasonings_tok = [tokenizer.encode(think_answer.split(thinking_end_tag)[0])[1:] for think_answer in think_answers]
         
         # Create prompts for different chunks of reasoning
         chunk_prompts = []
@@ -477,7 +482,7 @@ def main(llm, tokenizer, data_name, args):
             
             # For each split, create multiple prompts for generating different answers
             for split in splits:
-                partial_prompt = prompts[r] + tokenizer.decode(split) + "\n</think>\n\n"
+                partial_prompt = prompts[r] + tokenizer.decode(split) + "\n" + thinking_end_tag
                 # Add this prompt multiple times based on num_answers_per_chunk, i.e. m
                 for _ in range(args.num_answers_per_chunk):
                     chunk_prompts.append(partial_prompt)
@@ -491,10 +496,10 @@ def main(llm, tokenizer, data_name, args):
         # Also generate multiple answers for the original full reasoning
         final_prompts = []
         for r, think_answer in enumerate(think_answers):
-            if "</think>" not in think_answer:
-                final_prompt = prompts[r] + think_answer + "\n</think>\n\n"
+            if thinking_end_tag not in think_answer:
+                final_prompt = prompts[r] + think_answer + "\n" + thinking_end_tag
             else:
-                final_prompt = prompts[r] + think_answer.split("</think>")[0] + "</think>"
+                final_prompt = prompts[r] + think_answer.split(thinking_end_tag)[0] + thinking_end_tag
             
             # Add additional prompts for generating more answers (minus 1 because we already have one)
             for _ in range(args.num_answers_per_chunk - 1):
