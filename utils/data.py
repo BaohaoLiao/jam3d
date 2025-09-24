@@ -35,6 +35,12 @@ PROMPT_TEMPLATES = {
         "{output}",
         "\n\n",
     ),
+    "deepseek-r1-code": (
+        "<｜begin▁of▁sentence｜>Please reason step by step."
+        "<｜User｜>{input}<｜Assistant｜><think>\n",
+        "{output}",
+        "\n\n",
+    ),
     "qwen25-math-cot": (
         "<|im_start|>system\nPlease reason step by step, and put your final answer within \\boxed{{}}.<|im_end|>\n"
         "<|im_start|>user\n{input}<|im_end|>\n"
